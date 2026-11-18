@@ -1,0 +1,20 @@
+# MATLAB autosave and editor files
+*.asv
+*.m~
+*.autosave
+
+# Simulation outputs (regenerated each run)
+*.mat
+*.xlsx
+*.fig
+*.png
+
+# MATLAB compiled / cache
+*.mex*
+slprj/
+codegen/
+
+# OS and Google Drive clutter
+desktop.ini
+Thumbs.db
+.DS_Store
