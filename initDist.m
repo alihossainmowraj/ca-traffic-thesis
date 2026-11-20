@@ -4,6 +4,9 @@
 %  Produces: CA, P_var, h_hist, P_entry, D_upk, D_mk, veh_exited, v_mean
 %% =========================================================
 
+%% ---------------- OUTPUT FILE (initial state for runSim2) ----------------
+init_file = 'initDist.mat';   % <-- output file for this scenario
+
 %% ---------------- STAGE 0: initialization ----------------
 if ~exist('rho', 'var'),    rho    = 0.05; end     % initial density (veh/cell)
 if ~exist('Q_flow', 'var'), Q_flow = 0.5;  end     % initial flow
@@ -279,3 +282,32 @@ fprintf('P_entry size         : %d x %d\n', size(P_entry, 1), size(P_entry, 2));
 fprintf('v_mean               : %d\n', v_mean);
 fprintf('CA fields            : %s\n', strjoin(fieldnames(CA)', ', '));
 fprintf('Placed per lane (rows = segments):\n'); disp(n_placed_lane);
+
+%% Verification log (chk) - formerly nCheck.m
+global chk
+n_chk = 1000;
+chk = struct();
+chk.vehicle_position = NaN(n_chk, 3);
+chk.shft_state       = NaN(n_chk, 3);
+for n = 1:size(P_var, 1)
+    ID_r = P_var(n, 2);
+    if ID_r <= n_chk && P_var(n, 9) > 0
+        chk.vehicle_position(ID_r, :) = P_var(n, [9 10 7]);
+        chk.shft_state(ID_r, :)       = P_var(n, [12 16 13]);
+    end
+end
+fprintf('chk built: %d vehicles recorded at t = 0\n', sum(~isnan(chk.vehicle_position(:, 1))));
+
+%% ---------------- STAGE 8: save initial state for runSim2 ----------------
+init_info           = struct();
+init_info.created   = datestr(now);
+init_info.rho       = rho;                         % initial density (veh/cell)
+init_info.Q_flow    = Q_flow;                      % initial flow
+init_info.v_mean    = v_mean;
+init_info.n_veh     = n_t;                         % vehicles in P_veh
+init_info.n_placed  = n_placed;
+init_info.rng_state = rng;                         % generator state after dataset (not seeded there)
+
+save(init_file, 'CA', 'P_var', 'P_veh', 'P_entry', 'D_upk', 'D_mk', ...
+    'h_hist', 'v_mean', 'params', 'chk', 'init_info');
+fprintf('Initial state saved to %s\n', init_file);

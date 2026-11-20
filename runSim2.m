@@ -1,7 +1,8 @@
 %% =========================================================
 %  runSim2.m  -  Cellular Automata Traffic Simulation (rewrite)
 %
-%  Run order:  dataset  ->  initDist  ->  runSim2
+%  Run order:  new scenario (once): dataset  ->  initDist   (writes the .mat file)
+%              every simulation:    clear all  ->  runSim2  (reads the .mat file)
 %  Optional:   set T_max in the base workspace before calling runSim2
 %              (default 30 steps).
 %
@@ -24,23 +25,48 @@
 
 function runSim2()
 
-% ----- Fetch from base workspace -----
-CA       = evalin('base', 'CA');
-P_var    = evalin('base', 'P_var');
-P_veh    = evalin('base', 'P_veh');
-P_entry  = evalin('base', 'P_entry');
-D_upk    = evalin('base', 'D_upk');
-D_mk     = evalin('base', 'D_mk');
-h_hist   = evalin('base', 'h_hist');
-v_mean   = evalin('base', 'v_mean');
-params   = evalin('base', 'params');
+global chk
+
+% ----- Initial state file (written by initDist, never modified here) -----
+init_file = 'initDist.mat';   % <-- input file for this run
+
+if ~exist(init_file, 'file')
+    error('runSim2: initial-state file ''%s'' not found. Run dataset and initDist first.', init_file);
+end
+S = load(init_file);
+
+req_vars = {'CA', 'P_var', 'P_veh', 'P_entry', 'D_upk', 'D_mk', 'h_hist', 'v_mean', 'params'};
+for n = 1:numel(req_vars)
+    if ~isfield(S, req_vars{n})
+        error('runSim2: variable ''%s'' is missing from ''%s''.', req_vars{n}, init_file);
+    end
+end
+
+CA       = S.CA;
+P_var    = S.P_var;
+P_veh    = S.P_veh;
+P_entry  = S.P_entry;
+D_upk    = S.D_upk;
+D_mk     = S.D_mk;
+h_hist   = S.h_hist;
+v_mean   = S.v_mean;
+params   = S.params;
+if isfield(S, 'chk')
+    chk = S.chk;                % log starts from the loaded state
+end
+
+if isfield(S, 'init_info') && isfield(S.init_info, 'created')
+    fprintf('Initial state loaded from %s (created %s)\n', init_file, S.init_info.created);
+else
+    fprintf('Initial state loaded from %s\n', init_file);
+end
 
 M = numel(CA.L_seg);
 
 % =========================================================
 %  SIMULATION CONTROL
 % =========================================================
-T_max = 30;
+T_max = 90;
 if evalin('base', 'exist(''T_max'', ''var'')')
     T_max = evalin('base', 'T_max');
 end
@@ -276,6 +302,7 @@ function [CA, P_var, P_veh, h_hist, veh_exited] = processVehicle(i, t_n, ...
             P_veh(ID_r, 9) = 0;
             P_var(i, 6:18) = 0;
             veh_exited     = veh_exited + 1;
+            % recordChk(ID_r, t_n, 0, 0, 0, 0, 0, 0);
             return;
         end
 
@@ -420,6 +447,7 @@ function [CA, P_veh, P_var, P_entry, h_hist, veh_entered] = processSegmentEntry(
         new_row(18) = t_n;
         P_var(i_new, :)  = new_row;
         h_hist(i_new, :) = [h_i, h_i];
+        % recordChk(ID_r, t_n, 1, k, x_new, 0, 0, 0);
 
         P_veh(ID_r, 9) = 1;
         veh_entered    = veh_entered + 1;
@@ -522,7 +550,31 @@ function P_var = updatePvar(i, t_n, ...
     P_var(i, 16) = f_lshift_new;
     P_var(i, 17) = f_sshift_new;
     P_var(i, 18) = t_n;
+    % recordChk(P_var(i, 2), t_n, m_new, k_new, x_new, delta_new, f_lshift_new, sigma_new);
 end
+
+
+%% =========================================================
+%  recordChk  -  log position / shift state into global chk
+
+% function recordChk(ID_r, t_n, m_new, k_new, x_new, delta_new, f_lshift_new, sigma_new)
+%     global chk
+%     if isempty(chk) || ID_r > size(chk.vehicle_position, 1)
+%         return;
+%     end
+%     c_pos = 3 * t_n + (1:3);
+%     c_sft = 3 * t_n + (1:3);
+%     if size(chk.vehicle_position, 2) < c_pos(end)
+%         chk.vehicle_position(:, end+1:c_pos(end)) = NaN;
+%     end
+%     if size(chk.shft_state, 2) < c_sft(end)
+%         chk.shft_state(:, end+1:c_sft(end)) = NaN;
+%     end
+%     chk.vehicle_position(ID_r, c_pos) = [m_new, k_new, x_new];
+%     chk.shft_state(ID_r, c_sft)       = [delta_new, f_lshift_new, sigma_new];
+% end
+
+%% =========================================================
 
 
 %% =========================================================

@@ -1,3 +1,4 @@
+% Merged into initDist.m - no longer needs to be run.
 global chk
 n_chk = 1000;
 chk = struct();
