@@ -25,8 +25,6 @@
 
 function runSim2()
 
-global chk
-
 % ----- Initial state file (written by initDist, never modified here) -----
 init_file = 'initDist.mat';   % <-- input file for this run
 
@@ -51,9 +49,6 @@ D_mk     = S.D_mk;
 h_hist   = S.h_hist;
 v_mean   = S.v_mean;
 params   = S.params;
-if isfield(S, 'chk')
-    chk = S.chk;                % log starts from the loaded state
-end
 
 if isfield(S, 'init_info') && isfield(S.init_info, 'created')
     fprintf('Initial state loaded from %s (created %s)\n', init_file, S.init_info.created);
@@ -302,7 +297,6 @@ function [CA, P_var, P_veh, h_hist, veh_exited] = processVehicle(i, t_n, ...
             P_veh(ID_r, 9) = 0;
             P_var(i, 6:18) = 0;
             veh_exited     = veh_exited + 1;
-            % recordChk(ID_r, t_n, 0, 0, 0, 0, 0, 0);
             return;
         end
 
@@ -447,7 +441,6 @@ function [CA, P_veh, P_var, P_entry, h_hist, veh_entered] = processSegmentEntry(
         new_row(18) = t_n;
         P_var(i_new, :)  = new_row;
         h_hist(i_new, :) = [h_i, h_i];
-        % recordChk(ID_r, t_n, 1, k, x_new, 0, 0, 0);
 
         P_veh(ID_r, 9) = 1;
         veh_entered    = veh_entered + 1;
@@ -550,31 +543,7 @@ function P_var = updatePvar(i, t_n, ...
     P_var(i, 16) = f_lshift_new;
     P_var(i, 17) = f_sshift_new;
     P_var(i, 18) = t_n;
-    % recordChk(P_var(i, 2), t_n, m_new, k_new, x_new, delta_new, f_lshift_new, sigma_new);
 end
-
-
-%% =========================================================
-%  recordChk  -  log position / shift state into global chk
-
-% function recordChk(ID_r, t_n, m_new, k_new, x_new, delta_new, f_lshift_new, sigma_new)
-%     global chk
-%     if isempty(chk) || ID_r > size(chk.vehicle_position, 1)
-%         return;
-%     end
-%     c_pos = 3 * t_n + (1:3);
-%     c_sft = 3 * t_n + (1:3);
-%     if size(chk.vehicle_position, 2) < c_pos(end)
-%         chk.vehicle_position(:, end+1:c_pos(end)) = NaN;
-%     end
-%     if size(chk.shft_state, 2) < c_sft(end)
-%         chk.shft_state(:, end+1:c_sft(end)) = NaN;
-%     end
-%     chk.vehicle_position(ID_r, c_pos) = [m_new, k_new, x_new];
-%     chk.shft_state(ID_r, c_sft)       = [delta_new, f_lshift_new, sigma_new];
-% end
-
-%% =========================================================
 
 
 %% =========================================================
